@@ -11,576 +11,456 @@
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        /* Animaciones personalizadas */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-        .hidden {
-            display: none !important;
-        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .hidden { display: none !important; }
+        .step-active { @apply border-emerald-500 text-emerald-600 bg-emerald-50; }
+        .step-inactive { @apply border-slate-200 text-slate-400; }
+        .step-completed { @apply border-emerald-500 bg-emerald-500 text-white; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans selection:bg-green-200 min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-emerald-200 min-h-screen flex flex-col">
 
     <!-- Header -->
-    <header class="bg-gradient-to-r from-green-600 to-emerald-700 text-white p-6 shadow-lg relative overflow-hidden">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
+    <header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 shadow-lg relative z-10">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <i data-lucide="gift" class="w-8 h-8 animate-bounce"></i>
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">Amigo Secreto</h1>
-                    <p class="text-green-100 text-xs opacity-90 font-medium tracking-wide flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-green-300 animate-pulse"></span> Sincronizado en la Nube
+                    <p class="text-emerald-100 text-xs opacity-90 font-medium tracking-wide">
+                        Organizador Paso a Paso
                     </p>
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <button onclick="window.toggleAdminMode()" class="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg border bg-green-800/50 border-green-400/30 hover:bg-green-700/50 text-green-50">
-                    <i data-lucide="lock" class="w-4 h-4"></i>
-                    <span>Acceso Organizador</span>
-                </button>
-            </div>
+            <button onclick="window.openConfigModal()" class="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg border bg-white/10 border-white/20 hover:bg-white/20 text-white">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+                <span>Configurar EmailJS</span>
+            </button>
         </div>
     </header>
 
-    <main class="max-w-5xl mx-auto p-4 md:p-6 flex-grow w-full relative">
+    <main class="max-w-4xl mx-auto p-4 md:p-6 flex-grow w-full relative">
 
-        <!-- Notificación de Éxito -->
-        <div id="notification" class="hidden fixed top-24 right-4 md:right-10 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 max-w-sm md:max-w-md animate-fade-in">
-            <i data-lucide="check-circle" class="w-8 h-8 flex-shrink-0"></i>
-            <div>
-                <h4 class="font-bold text-lg" id="notif-title">¡Éxito!</h4>
-                <p class="text-green-100 text-sm" id="notif-msg">Operación completada.</p>
-            </div>
+        <!-- Indicador de Pasos -->
+        <div class="flex items-center justify-between mb-8 relative px-4 md:px-12">
+            <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-slate-200 -z-10"></div>
+            <div id="progress-bar" class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 bg-emerald-500 -z-10 transition-all duration-500" style="width: 0%;"></div>
+            
+            <div id="nav-step-1" class="w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 bg-white step-active transition-colors duration-300">1</div>
+            <div id="nav-step-2" class="w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 bg-white step-inactive transition-colors duration-300">2</div>
+            <div id="nav-step-3" class="w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 bg-white step-inactive transition-colors duration-300">3</div>
         </div>
 
-        <!-- VISTA 1: REGISTRO PÚBLICO -->
-        <div id="view-register" class="max-w-2xl mx-auto animate-fade-in">
-            <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 to-green-500"></div>
-                
-                <div class="mb-8 text-center">
-                    <div class="bg-green-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="users" class="w-8 h-8 text-green-600"></i>
+        <!-- Notificación -->
+        <div id="notification" class="hidden fixed top-24 right-4 md:right-10 bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 max-w-sm animate-fade-in">
+            <i data-lucide="check-circle" class="w-6 h-6 flex-shrink-0"></i>
+            <p class="font-bold text-sm" id="notif-msg">Guardado</p>
+        </div>
+
+        <!-- ==========================================
+             PASO 1: PARTICIPANTES
+        =========================================== -->
+        <div id="view-step-1" class="animate-fade-in">
+            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-100">
+                <div class="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="bg-emerald-100 p-3 rounded-xl text-emerald-600">
+                        <i data-lucide="users" class="w-6 h-6"></i>
                     </div>
-                    <h2 class="text-3xl font-bold text-slate-800">Registro de Familia</h2>
-                    <p class="text-slate-500 mt-2">
-                        Bienvenido. Por favor ingresa los datos de tu grupo para el sorteo.
-                    </p>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Participantes</h2>
+                        <p class="text-slate-500 text-sm">Añade a todas las personas que participarán en el sorteo.</p>
+                    </div>
                 </div>
                 
-                <div class="space-y-6">
-                    <!-- Formulario -->
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nombre del Grupo / Familia</label>
-                        <input type="text" id="input-group-name" placeholder="Ej. Familia Pérez" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none">
+                <!-- Formulario Añadir Participante -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Nombre</label>
+                        <input type="text" id="input-part-name" placeholder="Ej. Carlos" class="w-full p-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Tu Nombre (Representante)</label>
-                            <input type="text" id="input-rep-name" placeholder="Nombre completo" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Tu Número de WhatsApp</label>
-                            <input type="tel" id="input-rep-phone" placeholder="Ej. 50377778888" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none">
-                            <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                                <i data-lucide="message-circle" class="w-3 h-3"></i> Aquí recibirás tus resultados.
-                            </p>
-                        </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Correo Electrónico</label>
+                        <input type="email" id="input-part-email" placeholder="carlos@correo.com" class="w-full p-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
+                    <div class="flex items-end">
+                        <button onclick="window.addParticipant()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
+                            <i data-lucide="plus" class="w-5 h-5"></i> Añadir
+                        </button>
+                    </div>
+                </div>
 
-                    <div class="pt-6 border-t border-slate-100">
-                        <label class="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">
-                            Participantes de tu grupo
-                        </label>
-                        
-                        <div class="flex gap-2 mb-3">
-                            <input type="text" id="input-member-name" placeholder="Escribe un nombre y presiona Enter" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:outline-none shadow-inner">
-                            <button onclick="window.addTempMember()" class="bg-slate-800 text-white px-6 rounded-xl hover:bg-slate-700 transition font-bold shadow-lg shadow-slate-200">
-                                Añadir
-                            </button>
-                        </div>
-
-                        <!-- Lista temporal de miembros -->
-                        <div id="temp-members-list" class="min-h-[100px] bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-4 flex flex-wrap gap-2 content-start">
-                            <p id="temp-members-empty" class="text-slate-400 text-center italic mt-2 text-sm w-full">Aún no has añadido participantes.</p>
+                <!-- Lista de Participantes -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-end mb-3">
+                        <h3 class="font-bold text-slate-700">Lista de Participantes (<span id="count-participants">0</span>)</h3>
+                    </div>
+                    
+                    <div id="participants-list" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                        <div id="participants-empty" class="text-center py-8 text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                            Aún no has añadido a nadie. Ingresa el nombre y correo arriba.
                         </div>
                     </div>
+                </div>
 
-                    <button onclick="window.saveGroup()" class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3">
-                        <i data-lucide="cloud-upload" class="w-6 h-6"></i>
-                        Enviar Registro a la Nube
+                <div class="flex justify-end border-t border-slate-100 pt-6">
+                    <button onclick="window.goToStep2()" class="py-3 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-xl shadow-lg transition-all flex items-center gap-2">
+                        Siguiente: Detalles del Evento <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- VISTA 2: PANEL DE ADMINISTRADOR -->
-        <div id="view-admin" class="hidden animate-fade-in">
-            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-r-lg flex items-center justify-between shadow-sm">
-                <div class="flex items-center gap-3">
-                    <div class="bg-amber-100 p-2 rounded-full">
-                        <i data-lucide="shield" class="w-6 h-6 text-amber-600"></i>
+        <!-- ==========================================
+             PASO 2: DETALLES DEL EVENTO
+        =========================================== -->
+        <div id="view-step-2" class="hidden animate-fade-in">
+            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-100">
+                <div class="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
+                    <div class="bg-blue-100 p-3 rounded-xl text-blue-600">
+                        <i data-lucide="calendar-days" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-amber-800">Panel de Organizador</h3>
-                        <p class="text-amber-700 text-sm">Monitoreo y Sorteo. Los datos están sincronizados en tiempo real.</p>
+                        <h2 class="text-2xl font-bold text-slate-800">Detalles del Evento</h2>
+                        <p class="text-slate-500 text-sm">Esta información se incluirá en el correo de todos.</p>
                     </div>
                 </div>
-                <button onclick="window.exitAdminMode()" class="bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
-                    Cerrar Panel
-                </button>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- Lista de Grupos -->
-                <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden h-fit">
-                    <div class="bg-slate-100 p-4 border-b border-slate-200 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-700 flex items-center gap-2">
-                            <i data-lucide="users" class="w-5 h-5"></i> Grupos en la base de datos (<span id="count-groups">0</span>)
-                        </h3>
+                
+                <div class="space-y-5 mb-8">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-1.5">Nombre del Evento</label>
+                        <input type="text" id="event-name" oninput="window.saveState()" placeholder="Ej. Intercambio Navideño Familia Pérez" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-medium text-slate-800">
                     </div>
-                    <div id="admin-groups-list" class="max-h-[600px] overflow-y-auto p-4 space-y-3">
-                        <div class="text-center py-10 text-slate-400">
-                            <i data-lucide="cloud-off" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
-                            Cargando datos de la nube...
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-1.5">Fecha del Intercambio</label>
+                            <input type="date" id="event-date" oninput="window.saveState()" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-1.5">Valor / Presupuesto</label>
+                            <input type="text" id="event-budget" oninput="window.saveState()" placeholder="Ej. $20 USD o Regalo hecho a mano" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 font-medium">
                         </div>
                     </div>
                 </div>
 
-                <!-- Zona de Sorteo -->
-                <div class="flex flex-col justify-center">
-                    <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl text-center border border-slate-700 relative overflow-hidden">
-                        <div id="db-status-overlay" class="absolute top-3 right-3 flex items-center gap-1 text-xs font-bold px-2 py-1 rounded bg-slate-800 text-slate-400">
-                            <div class="w-2 h-2 rounded-full bg-slate-500"></div> Conectando...
-                        </div>
-                        <i data-lucide="gift" class="w-16 h-16 mx-auto mb-4 text-green-400"></i>
-                        <h2 class="text-3xl font-bold mb-2">¿Listos para el sorteo?</h2>
-                        <p class="text-slate-400 mb-8">
-                            Cuando todos hayan enviado sus datos a través del link, pulsa este botón.
-                        </p>
-                        
-                        <button id="btn-draw" onclick="window.performDraw()" disabled class="w-full py-4 rounded-xl font-bold text-xl flex items-center justify-center gap-3 transition-all bg-slate-700 text-slate-500 cursor-not-allowed">
-                            <i data-lucide="play" class="fill-current"></i>
-                            <span id="btn-draw-text">Faltan participantes</span>
-                        </button>
-                    </div>
-
-                    <div class="mt-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h4 class="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <i data-lucide="activity" class="w-5 h-5 text-blue-500"></i> Estadísticas Globales
-                        </h4>
-                        <ul class="text-sm text-slate-600 space-y-3">
-                            <li class="flex justify-between items-center bg-slate-50 p-2 rounded">
-                                <span>Total Grupos:</span> 
-                                <span class="font-bold text-lg" id="stat-total-groups">0</span>
-                            </li>
-                            <li class="flex justify-between items-center bg-slate-50 p-2 rounded">
-                                <span>Total Personas:</span> 
-                                <span class="font-bold text-lg text-blue-600" id="stat-total-people">0</span>
-                            </li>
-                        </ul>
-                    </div>
+                <div class="flex justify-between items-center border-t border-slate-100 pt-6">
+                    <button onclick="window.goToStep1()" class="py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-all flex items-center gap-2">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i> Volver
+                    </button>
+                    <button onclick="window.performDraw()" class="py-3 px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-xl shadow-lg transition-all flex items-center gap-2 transform hover:scale-105">
+                        <i data-lucide="dices" class="w-5 h-5"></i> Realizar Sorteo Mágico
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- VISTA 3: RESULTADOS -->
-        <div id="view-results" class="hidden animate-fade-in max-w-3xl mx-auto">
+        <!-- ==========================================
+             PASO 3: RESULTADOS Y ENVÍO
+        =========================================== -->
+        <div id="view-step-3" class="hidden animate-fade-in">
             <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center p-3 bg-green-100 text-green-600 rounded-full mb-4">
-                    <i data-lucide="check-circle" class="w-8 h-8"></i>
+                <div class="inline-flex items-center justify-center p-4 bg-emerald-100 text-emerald-600 rounded-full mb-4 shadow-inner">
+                    <i data-lucide="party-popper" class="w-10 h-10"></i>
                 </div>
-                <h2 class="text-3xl font-bold text-slate-800">¡Sorteo Completado!</h2>
-                <p class="text-slate-600 mt-2">
-                    Las cartas secretas han sido generadas. Haz clic en "Enviar por WhatsApp" para notificar a cada grupo de forma privada.
-                </p>
+                <h2 class="text-3xl font-bold text-slate-800">¡Sorteo Generado!</h2>
+                <p class="text-slate-600 mt-2">Nadie sabe a quién le tocó, excepto el sistema. Es hora de enviar los correos.</p>
             </div>
 
-            <div id="results-list" class="grid gap-6 mb-12">
-                <!-- Tarjetas de resultados aquí -->
+            <!-- Vista Previa del Correo -->
+            <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden mb-8">
+                <div class="bg-slate-800 px-6 py-3 flex items-center gap-2 text-white">
+                    <i data-lucide="mail" class="w-5 h-5"></i>
+                    <span class="font-bold">Vista previa del correo que se enviará</span>
+                </div>
+                <div class="p-6 bg-slate-50 text-slate-700 font-medium whitespace-pre-wrap border-b border-slate-200" id="email-preview">
+                    <!-- Preview filled by JS -->
+                </div>
             </div>
 
-            <div class="flex justify-center pb-12">
-                <button onclick="window.resetApp()" class="flex items-center gap-2 text-slate-500 hover:text-red-600 transition px-8 py-3 rounded-xl border border-slate-200 hover:border-red-200 bg-white shadow-sm hover:shadow">
-                    <i data-lucide="trash" class="w-4 h-4"></i>
-                    Eliminar todos los registros de la Nube (Nuevo Sorteo)
+            <!-- Panel de Envío Masivo -->
+            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center shadow-sm mb-8">
+                <h3 class="text-blue-900 font-bold text-xl mb-2">Envío Automático a Todos</h3>
+                <p class="text-blue-700 mb-6 text-sm">Se enviarán <span id="bulk-count" class="font-bold text-lg">0</span> correos en este instante.</p>
+                <button onclick="window.sendAllEmails()" id="btn-bulk-send" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition flex items-center justify-center gap-3 mx-auto w-full md:w-auto">
+                    <i data-lucide="send" class="w-6 h-6"></i>
+                    Enviar TODOS los correos ahora
+                </button>
+                <div id="bulk-progress" class="hidden mt-6 max-w-lg mx-auto">
+                    <div class="w-full bg-blue-200 rounded-full h-3">
+                        <div id="bulk-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-blue-800 mt-2 font-bold" id="bulk-status-text">Iniciando envíos...</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between mb-4 px-2">
+                <h3 class="font-bold text-slate-700 text-lg">Estado de Envíos Individuales</h3>
+                <button onclick="window.toggleAllDetails()" class="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 font-bold underline">
+                    <i data-lucide="eye" class="w-4 h-4"></i> Mostrar lista secreta (Solo tú)
+                </button>
+            </div>
+
+            <!-- Lista de Resultados (Tarjetas) -->
+            <div id="results-list" class="grid gap-4 mb-12">
+                <!-- Tarjetas de resultados inyectadas aquí -->
+            </div>
+
+            <div class="flex justify-center pb-12 border-t border-slate-200 pt-8">
+                <button onclick="window.resetApp()" class="flex items-center gap-2 text-red-500 hover:text-red-700 transition px-8 py-3 rounded-xl border border-red-200 hover:bg-red-50 bg-white shadow-sm font-bold">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                    Borrar todo y empezar nuevo sorteo
                 </button>
             </div>
         </div>
 
     </main>
 
-    <!-- FIREBASE MÓDULOS OBLIGATORIOS Y LÓGICA -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- MODAL CONFIGURACIÓN EMAILJS -->
+    <div id="modal-config" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-slate-800 text-white p-5 flex justify-between items-center">
+                <h3 class="font-bold flex items-center gap-2 text-lg"><i data-lucide="mail" class="w-5 h-5"></i> Configuración EmailJS</h3>
+                <button onclick="window.closeConfigModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-5">
+                <p class="text-sm text-slate-600 leading-relaxed bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    Para enviar los correos automáticamente, crea una cuenta gratuita en <a href="https://www.emailjs.com/" target="_blank" class="text-blue-700 font-bold underline">EmailJS.com</a>.<br><br>
+                    Crea un <strong>Template</strong> que contenga solo esta variable en el cuerpo del correo: <br>
+                    <code class="block bg-white p-2 border rounded mt-2 font-bold text-center">{{message}}</code>
+                </p>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Service ID</label>
+                    <input type="text" id="cjs-service" placeholder="ej. service_xyz" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Template ID</label>
+                    <input type="text" id="cjs-template" placeholder="ej. template_abc" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Public Key</label>
+                    <input type="text" id="cjs-key" placeholder="ej. User_API_Key" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button onclick="window.saveEmailConfig()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4 flex items-center justify-center gap-2">
+                    <i data-lucide="save" class="w-5 h-5"></i> Guardar Credenciales
+                </button>
+            </div>
+        </div>
+    </div>
 
-        // --- ESTADO GLOBAL ---
-        window.groups = [];
-        window.tempMembers = [];
-        window.drawResults = null;
-        window.isAdminMode = false;
+    <!-- LÓGICA DE LA APLICACIÓN -->
+    <script>
+        // --- ESTADO DE LA APLICACIÓN (Persistente) ---
+        let state = {
+            step: 1,
+            participants: [],
+            event: { name: '', date: '', budget: '' },
+            results: null
+        };
         
-        let db = null;
-        let auth = null;
-        let currentUser = null;
-
-        // Entorno nativo
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'amigo-secreto-default';
+        let emailConfig = { serviceId: '', templateId: '', publicKey: '' };
 
         // --- INICIALIZACIÓN ---
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            
+            // Cargar estado si existe
+            const savedState = localStorage.getItem('amigo_secreto_state');
+            if(savedState) {
+                try {
+                    state = JSON.parse(savedState);
+                } catch(e) { console.error("Error al cargar estado", e); }
+            }
 
-            // Configurar evento de enter en el input de miembros
-            const inputMemberName = document.getElementById('input-member-name');
-            if(inputMemberName) {
-                inputMemberName.addEventListener('keypress', function (e) {
-                    if (e.key === 'Enter') window.addTempMember();
+            // Cargar Configuración de EmailJS
+            const savedEmail = localStorage.getItem('as_email_config');
+            if(savedEmail) {
+                emailConfig = JSON.parse(savedEmail);
+                document.getElementById('cjs-service').value = emailConfig.serviceId || '';
+                document.getElementById('cjs-template').value = emailConfig.templateId || '';
+                document.getElementById('cjs-key').value = emailConfig.publicKey || '';
+                if(emailConfig.publicKey) emailjs.init(emailConfig.publicKey);
+            }
+
+            // Restaurar valores en inputs del evento
+            document.getElementById('event-name').value = state.event.name || '';
+            document.getElementById('event-date').value = state.event.date || '';
+            document.getElementById('event-budget').value = state.event.budget || '';
+
+            // Evento "Enter" en formulario de participantes
+            const inputEmail = document.getElementById('input-part-email');
+            if(inputEmail) {
+                inputEmail.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') window.addParticipant();
                 });
             }
 
-            // Inicializar base de datos de la plataforma automáticamente
-            initCloudDatabase();
+            // Navegar al paso correcto
+            restoreStep();
         });
 
-        async function initCloudDatabase() {
-            try {
-                if (typeof __firebase_config === 'undefined') {
-                    console.warn("No se detectó configuración de nube. Usando almacenamiento local (DOM) como respaldo.");
-                    loadLocalFallback();
-                    return;
-                }
-
-                // 1. Inicializar Firebase con los datos del entorno
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                // 2. Autenticación OBLIGATORIA antes de consultar
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                // 3. Escuchar estado del usuario y sincronizar BD
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
-                    if (user) {
-                        document.getElementById('db-status-overlay').innerHTML = '<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Nube Conectada';
-                        setupCloudListener();
-                    } else {
-                        document.getElementById('db-status-overlay').innerHTML = '<div class="w-2 h-2 rounded-full bg-red-500"></div> Desconectado';
-                    }
-                });
-
-            } catch(e) {
-                console.error("Error conectando a la Nube:", e);
-                loadLocalFallback();
-            }
-        }
-
-        function setupCloudListener() {
-            if (!currentUser || !db) return;
+        window.saveState = function() {
+            // Guardar valores de los inputs del evento en el estado actual
+            state.event.name = document.getElementById('event-name').value;
+            state.event.date = document.getElementById('event-date').value;
+            state.event.budget = document.getElementById('event-budget').value;
             
-            // Ruta estricta obligatoria para la nube de Canvas
-            const groupsRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
-            
-            onSnapshot(groupsRef, (snapshot) => {
-                window.groups = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                window.renderAdminGroups();
-                window.renderStats();
-            }, (error) => {
-                console.error("Error al sincronizar datos:", error);
-            });
-        }
-
-        function loadLocalFallback() {
-            const localData = localStorage.getItem('as_local_groups_fallback');
-            if(localData) {
-                window.groups = JSON.parse(localData);
-            }
-            document.getElementById('db-status-overlay').innerHTML = '<div class="w-2 h-2 rounded-full bg-amber-500"></div> Modo DOM/Local';
-            window.renderAdminGroups();
-            window.renderStats();
-        }
-
-        function saveLocalFallback() {
-            localStorage.setItem('as_local_groups_fallback', JSON.stringify(window.groups));
-        }
-
-        // --- GESTIÓN DE MIEMBROS TEMPORALES ---
-        window.addTempMember = function() {
-            const input = document.getElementById('input-member-name');
-            const name = input.value.trim();
-            if (name) {
-                window.tempMembers.push(name);
-                input.value = '';
-                window.renderTempMembers();
-            }
+            localStorage.setItem('amigo_secreto_state', JSON.stringify(state));
         };
 
-        window.removeTempMember = function(index) {
-            window.tempMembers.splice(index, 1);
-            window.renderTempMembers();
-        };
+        // --- MANEJO DE PASOS / VISTAS ---
+        function setProgress(step) {
+            const bar = document.getElementById('progress-bar');
+            if(step === 1) bar.style.width = '0%';
+            if(step === 2) bar.style.width = '50%';
+            if(step === 3) bar.style.width = '100%';
 
-        window.renderTempMembers = function() {
-            const list = document.getElementById('temp-members-list');
-            const emptyMsg = document.getElementById('temp-members-empty');
-            
-            // Limpiar chips
-            const items = list.querySelectorAll('.member-chip');
-            items.forEach(el => el.remove());
-
-            if (window.tempMembers.length === 0) {
-                emptyMsg.classList.remove('hidden');
-            } else {
-                emptyMsg.classList.add('hidden');
-                window.tempMembers.forEach((member, index) => {
-                    const chip = document.createElement('span');
-                    chip.className = 'member-chip animate-fade-in bg-white border border-slate-200 text-slate-700 pl-3 pr-2 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2';
-                    chip.innerHTML = `
-                        ${member}
-                        <button onclick="window.removeTempMember(${index})" class="w-5 h-5 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-500 hover:text-white transition">×</button>
-                    `;
-                    list.appendChild(chip);
-                });
+            for(let i=1; i<=3; i++) {
+                const nav = document.getElementById('nav-step-'+i);
+                nav.classList.remove('step-active', 'step-inactive', 'step-completed');
+                
+                if(i < step) nav.classList.add('step-completed');
+                else if(i === step) nav.classList.add('step-active');
+                else nav.classList.add('step-inactive');
             }
+        }
+
+        function restoreStep() {
+            if(state.step === 1) window.goToStep1(true);
+            if(state.step === 2) window.goToStep2(true);
+            if(state.step === 3) {
+                window.renderResults(); 
+                showView(3);
+            }
+        }
+
+        function showView(step) {
+            document.getElementById('view-step-1').classList.add('hidden');
+            document.getElementById('view-step-2').classList.add('hidden');
+            document.getElementById('view-step-3').classList.add('hidden');
+            document.getElementById('view-step-'+step).classList.remove('hidden');
+            setProgress(step);
+            state.step = step;
+            window.saveState();
+        }
+
+        window.goToStep1 = function(isRestore = false) {
+            window.renderParticipants();
+            showView(1);
         };
 
-        // --- GUARDADO A LA NUBE (FIRESTORE) ---
-        window.saveGroup = async function() {
-            const inputGroupName = document.getElementById('input-group-name');
-            const inputRepName = document.getElementById('input-rep-name');
-            const inputRepPhone = document.getElementById('input-rep-phone');
+        window.goToStep2 = function(isRestore = false) {
+            if(state.participants.length < 3 && !isRestore) {
+                alert("Debes añadir al menos a 3 participantes para hacer un sorteo válido.");
+                return;
+            }
+            showView(2);
+        };
 
-            const groupName = inputGroupName.value.trim();
-            const repName = inputRepName.value.trim();
-            const repPhone = inputRepPhone.value.trim();
+        // --- PASO 1: PARTICIPANTES LÓGICA ---
+        window.addParticipant = function() {
+            const nameInput = document.getElementById('input-part-name');
+            const emailInput = document.getElementById('input-part-email');
+            
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
 
-            if (!groupName || !repName || !repPhone || window.tempMembers.length === 0) {
-                alert("Por favor completa todos los datos y añade al menos un participante.");
+            if(!name || !email) {
+                alert("Por favor, ingresa tanto el nombre como el correo del participante.");
+                return;
+            }
+            
+            if (!/\S+@\S+\.\S+/.test(email)) {
+                alert("Por favor ingresa un correo electrónico válido.");
                 return;
             }
 
-            if (!/^\+?[0-9]{8,15}$/.test(repPhone.replace(/\s/g, ''))) {
-                alert("Por favor ingresa un número de WhatsApp válido.");
-                return;
-            }
-
-            const newGroup = {
-                groupName,
-                repName,
-                repPhone: repPhone.replace(/\s/g, ''),
-                members: window.tempMembers.map(name => ({
-                    id: Math.random().toString(36).substr(2, 9),
-                    name,
-                    groupName
-                }))
-            };
-
-            // Intentar subir a Firestore
-            if (db && currentUser) {
-                try {
-                    const groupsRef = collection(db, 'artifacts', appId, 'public', 'data', 'groups');
-                    await addDoc(groupsRef, newGroup);
-                    window.showNotification('¡Datos Guardados!', 'El grupo ya está sincronizado en la Nube.');
-                } catch(e) {
-                    alert("Error guardando en la Nube: " + e.message);
-                }
-            } else {
-                // Modo fallback local si no hay nube
-                newGroup.id = Date.now().toString();
-                window.groups.push(newGroup);
-                saveLocalFallback();
-                window.showNotification('¡Guardado Local!', 'Modo DOM activado por falta de nube.');
-                window.renderAdminGroups();
-                window.renderStats();
-            }
-
-            // Limpiar Formulario
-            inputGroupName.value = '';
-            inputRepName.value = '';
-            inputRepPhone.value = '';
-            window.tempMembers = [];
-            window.renderTempMembers();
+            // Crear ID único
+            const id = Math.random().toString(36).substr(2, 9);
+            state.participants.push({ id, name, email });
             
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+            nameInput.value = '';
+            emailInput.value = '';
+            nameInput.focus();
 
-        window.deleteGroup = async function(id) {
-            if(confirm("¿Estás seguro de eliminar este grupo de la base de datos?")) {
-                if(db && currentUser) {
-                    try {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', id));
-                    } catch(e) {
-                        alert("Error borrando el grupo: " + e.message);
-                    }
-                } else {
-                    window.groups = window.groups.filter(g => g.id !== id.toString());
-                    saveLocalFallback();
-                    window.renderAdminGroups();
-                    window.renderStats();
-                }
-            }
-        };
-
-        window.showNotification = function(title, msg) {
-            const notif = document.getElementById('notification');
-            document.getElementById('notif-title').innerText = title;
-            document.getElementById('notif-msg').innerText = msg;
-            notif.classList.remove('hidden');
-            setTimeout(() => notif.classList.add('hidden'), 3000);
-        };
-
-        // --- INTERFAZ ADMINISTRADOR ---
-        window.toggleAdminMode = function() {
-            if (window.isAdminMode) {
-                window.exitAdminMode();
-            } else {
-                const pin = prompt("🔒 ACCESO ORGANIZADOR\n\nPor favor ingresa la contraseña para ver los registros.");
-                if (pin === '1234') {
-                    window.enterAdminMode();
-                } else if (pin !== null) {
-                    alert("⛔ Contraseña incorrecta.");
-                }
-            }
-        };
-
-        window.enterAdminMode = function() {
-            window.isAdminMode = true;
-            document.getElementById('view-register').classList.add('hidden');
-            document.getElementById('view-admin').classList.remove('hidden');
-            document.getElementById('view-results').classList.add('hidden');
+            window.saveState();
+            window.renderParticipants();
             
-            const btn = document.getElementById('btn-admin-toggle');
-            btn.classList.replace('bg-green-800/50', 'bg-amber-400');
-            btn.classList.replace('border-green-400/30', 'border-amber-500');
-            btn.classList.replace('text-green-50', 'text-amber-900');
-            btn.innerHTML = `<i data-lucide="unlock" class="w-4 h-4"></i><span>MODO ORGANIZADOR</span>`;
-            lucide.createIcons();
-            window.renderAdminGroups();
+            showNotification("Participante Añadido");
         };
 
-        window.exitAdminMode = function() {
-            window.isAdminMode = false;
-            document.getElementById('view-register').classList.remove('hidden');
-            document.getElementById('view-admin').classList.add('hidden');
-            document.getElementById('view-results').classList.add('hidden');
-
-            const btn = document.getElementById('btn-admin-toggle');
-            btn.classList.replace('bg-amber-400', 'bg-green-800/50');
-            btn.classList.replace('border-amber-500', 'border-green-400/30');
-            btn.classList.replace('text-amber-900', 'text-green-50');
-            btn.innerHTML = `<i data-lucide="lock" class="w-4 h-4"></i><span>Acceso Organizador</span>`;
-            lucide.createIcons();
+        window.removeParticipant = function(id) {
+            state.participants = state.participants.filter(p => p.id !== id);
+            window.saveState();
+            window.renderParticipants();
         };
 
-        window.renderAdminGroups = function() {
-            const list = document.getElementById('admin-groups-list');
-            if(!list) return; // Por seguridad
+        window.renderParticipants = function() {
+            const list = document.getElementById('participants-list');
+            const empty = document.getElementById('participants-empty');
+            const count = document.getElementById('count-participants');
+            
+            count.innerText = state.participants.length;
             list.innerHTML = '';
 
-            if (window.groups.length === 0) {
-                list.innerHTML = `
-                    <div class="text-center py-10 text-slate-400">
-                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
-                        No hay grupos en la Nube todavía. Pásales el link web para que se inscriban.
-                    </div>`;
-                lucide.createIcons();
+            if (state.participants.length === 0) {
+                list.appendChild(empty);
+                empty.classList.remove('hidden');
                 return;
             }
 
-            window.groups.forEach(group => {
-                const item = document.createElement('div');
-                item.className = 'bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:shadow-md transition';
-                
-                let membersHtml = group.members.map(m => 
-                    `<span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">${m.name}</span>`
-                ).join('');
+            empty.classList.add('hidden');
+            list.appendChild(empty); // Keep element around
 
+            state.participants.forEach((p, index) => {
+                const item = document.createElement('div');
+                item.className = 'bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm animate-fade-in';
                 item.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h4 class="font-bold text-slate-800">${group.groupName}</h4>
-                            <p class="text-xs text-slate-500">Rep: ${group.repName} (${group.repPhone})</p>
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                            ${index + 1}
                         </div>
-                        <button onclick="window.deleteGroup('${group.id}')" class="text-slate-400 hover:text-red-600 transition bg-slate-50 p-2 rounded-full" title="Eliminar de la Nube">
-                            <i data-lucide="trash-2" class="w-5 h-5"></i>
-                        </button>
+                        <div class="truncate">
+                            <p class="font-bold text-slate-800 text-sm truncate">${p.name}</p>
+                            <p class="text-xs text-slate-500 truncate">${p.email}</p>
+                        </div>
                     </div>
-                    <div class="flex flex-wrap gap-1">
-                        ${membersHtml}
-                    </div>
+                    <button onclick="window.removeParticipant('${p.id}')" class="text-slate-400 hover:text-red-500 p-2 transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
                 `;
                 list.appendChild(item);
             });
             lucide.createIcons();
         };
 
-        window.renderStats = function() {
-            const countEl = document.getElementById('count-groups');
-            const totalGroupEl = document.getElementById('stat-total-groups');
-            const totalPeopleEl = document.getElementById('stat-total-people');
-            
-            if(countEl) countEl.innerText = window.groups.length;
-            if(totalGroupEl) totalGroupEl.innerText = window.groups.length;
-            
-            const totalPeople = window.groups.reduce((acc, g) => acc + g.members.length, 0);
-            if(totalPeopleEl) totalPeopleEl.innerText = totalPeople;
-
-            const btnDraw = document.getElementById('btn-draw');
-            const btnDrawText = document.getElementById('btn-draw-text');
-            
-            if(!btnDraw) return;
-
-            if (window.groups.length > 0) {
-                btnDraw.disabled = false;
-                btnDraw.classList.remove('bg-slate-700', 'text-slate-500', 'cursor-not-allowed');
-                btnDraw.classList.add('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105', 'animate-pulse');
-                btnDrawText.innerText = 'REALIZAR SORTEO AHORA';
-            } else {
-                btnDraw.disabled = true;
-                btnDraw.classList.add('bg-slate-700', 'text-slate-500', 'cursor-not-allowed');
-                btnDraw.classList.remove('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105', 'animate-pulse');
-                btnDrawText.innerText = 'Faltan participantes';
-            }
-        };
-
-        // --- LÓGICA DEL SORTEO ---
+        // --- PASO 2 & SORTEO ---
         window.performDraw = function() {
-            let allParticipants = [];
-            window.groups.forEach(group => {
-                group.members.forEach(member => {
-                    allParticipants.push({ ...member });
-                });
-            });
+            window.saveState(); // Asegurar datos recientes
 
-            if (allParticipants.length < 3) {
-                alert("Se necesitan al menos 3 participantes en la nube para jugar.");
+            if (!state.event.name || !state.event.date || !state.event.budget) {
+                alert("Por favor, completa el Nombre, Fecha y Valor del evento.");
                 return;
             }
 
-            let shuffled = [...allParticipants];
+            if (state.participants.length < 3) {
+                alert("Insuficientes participantes. Regresa al Paso 1 y añade al menos a 3 personas.");
+                return;
+            }
+
+            // Mezclar (Fisher-Yates)
+            let shuffled = [...state.participants];
             for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
 
+            // Asignación Circular (Garantiza que A->B->C->A, nadie a sí mismo)
             const results = {};
             for (let i = 0; i < shuffled.length; i++) {
                 const giver = shuffled[i];
@@ -588,69 +468,70 @@
                 results[giver.id] = receiver;
             }
 
-            window.drawResults = results;
-            window.renderResults();
+            state.results = results;
+            window.saveState();
             
-            document.getElementById('view-admin').classList.add('hidden');
-            document.getElementById('view-results').classList.remove('hidden');
+            window.renderResults();
+            showView(3);
         };
 
+        // --- GENERADOR DE CORREO ---
+        function generateEmailBody(giverName, receiverName) {
+            const ev = state.event;
+            // Usamos formato texto plano amigable
+            return `¡Hola ${giverName}!\n\nHas sido invitado a participar en nuestro intercambio de regalos: ${ev.name}.\n\n📅 Fecha del evento: ${ev.date}\n💰 Presupuesto sugerido: ${ev.budget}\n\n=========================================\n🎁 TE HA TOCADO REGALARLE A:\n👉 ${receiverName} 👈\n=========================================\n\n¡Mantén el secreto para que sea una sorpresa!\nFelices Fiestas.`;
+        }
+
+        // --- PASO 3: RESULTADOS Y ENVÍO ---
         window.renderResults = function() {
+            if(!state.results) return;
+
+            document.getElementById('bulk-count').innerText = state.participants.length;
+
+            // Mostrar vista previa general (Usando Giver1 y Receiver1 como ejemplo)
+            const p1 = state.participants[0];
+            const r1 = state.results[p1.id];
+            const previewText = generateEmailBody("[Tu Nombre]", "[Nombre de la Persona]");
+            document.getElementById('email-preview').innerText = previewText;
+
+            // Renderizar Lista
             const list = document.getElementById('results-list');
             list.innerHTML = '';
 
-            window.groups.forEach(group => {
-                const assignments = group.members.map(member => {
-                    const receiver = window.drawResults[member.id];
-                    return { giver: member.name, receiver: receiver.name };
-                });
-
-                let mailBody = `🎄 *RESULTADOS AMIGO SECRETO - ${group.groupName.toUpperCase()}* 🎄\n\n`;
-                mailBody += `Hola ${group.repName}, aquí están los resultados oficiales para tu grupo:\n\n`;
-                mailBody += `------------------------------------------\n`;
-                assignments.forEach(a => {
-                    mailBody += `🎁 *${a.giver}* 👉 le regala a 👉  *${a.receiver}* \n`;
-                });
-                mailBody += `------------------------------------------\n\n`;
-                mailBody += `🤫 IMPORTANTE: Solo tú has recibido esta lista. Compártela discretamente.\n\n¡Felices Fiestas!`;
-
-                const waLink = `https://wa.me/${group.repPhone}?text=${encodeURIComponent(mailBody)}`;
+            state.participants.forEach(giver => {
+                const receiver = state.results[giver.id];
+                const emailBody = generateEmailBody(giver.name, receiver.name);
+                
+                // Enlace Mailto (Codificando espacios y saltos de línea correctamente)
+                const subject = encodeURIComponent(`Sorteo Amigo Secreto: ${state.event.name}`);
+                const body = encodeURIComponent(emailBody);
+                const mailtoLink = `mailto:${giver.email}?subject=${subject}&body=${body}`;
 
                 const card = document.createElement('div');
-                card.id = `card-${group.id}`;
-                card.className = 'bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300';
+                card.id = `card-${giver.id}`;
+                card.className = 'bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row';
+                
                 card.innerHTML = `
-                    <div class="p-5 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-50">
-                        <div class="flex items-center gap-4 w-full md:w-auto">
-                            <div class="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-bold text-lg">
-                                ${group.groupName.charAt(0)}
-                            </div>
+                    <div class="p-5 flex-grow border-b md:border-b-0 md:border-r border-slate-100 flex flex-col justify-center">
+                        <div class="flex justify-between items-start mb-2">
                             <div>
-                                <h3 class="font-bold text-lg text-slate-800">${group.groupName}</h3>
-                                <p class="text-sm text-slate-500">WA: ${group.repPhone}</p>
+                                <h4 class="font-bold text-slate-800 text-lg">${giver.name}</h4>
+                                <p class="text-sm text-slate-500"><i data-lucide="mail" class="w-3 h-3 inline"></i> ${giver.email}</p>
                             </div>
+                            <span class="status-badge bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded-md">Pendiente</span>
                         </div>
                         
-                        <div class="status-area w-full md:w-auto">
-                            <a href="${waLink}" target="_blank" class="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition shadow-lg shadow-green-200">
-                                <i data-lucide="message-circle" class="w-5 h-5"></i> Enviar por WhatsApp
-                            </a>
+                        <!-- Sección Secreta -->
+                        <div class="secret-info hidden mt-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+                            <p class="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Debe regalarle a:</p>
+                            <p class="font-bold text-lg text-slate-800">${receiver.name}</p>
                         </div>
                     </div>
-                    <div class="bg-slate-50/50 p-4">
-                         <button onclick="window.toggleDetails(this)" class="w-full flex items-center justify-between text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider p-2">
-                            <span class="btn-text">Ver detalles (Solo Organizador)</span>
-                            <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
-                        </button>
-                        <div class="details-content hidden mt-2 bg-white border border-slate-100 rounded-lg divide-y divide-slate-50">
-                            ${assignments.map(a => `
-                                <div class="p-3 flex justify-between items-center text-sm">
-                                    <span class="font-medium text-slate-700">${a.giver}</span>
-                                    <span class="text-slate-300">➜</span>
-                                    <span class="font-bold text-green-600">${a.receiver}</span>
-                                </div>
-                            `).join('')}
-                        </div>
+                    
+                    <div class="p-4 bg-slate-50 flex items-center justify-center md:w-64">
+                        <a href="${mailtoLink}" target="_blank" onclick="window.markAsSent('${giver.id}')" class="w-full bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-600 font-bold py-3 px-4 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 text-sm text-center">
+                            <i data-lucide="external-link" class="w-4 h-4"></i> Abrir en Correo
+                        </a>
                     </div>
                 `;
                 list.appendChild(card);
@@ -658,43 +539,151 @@
             lucide.createIcons();
         };
 
-        window.toggleDetails = function(btn) {
-            const content = btn.nextElementSibling;
-            const textSpan = btn.querySelector('.btn-text');
-            if (content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                textSpan.innerText = 'Ocultar detalles';
-            } else {
-                content.classList.add('hidden');
-                textSpan.innerText = 'Ver detalles (Solo Organizador)';
+        window.toggleAllDetails = function() {
+            const secrets = document.querySelectorAll('.secret-info');
+            const isHidden = secrets[0].classList.contains('hidden');
+            secrets.forEach(el => {
+                if(isHidden) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+        };
+
+        window.markAsSent = function(id) {
+            const badge = document.querySelector(`#card-${id} .status-badge`);
+            if(badge) {
+                badge.className = 'status-badge bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1';
+                badge.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Listo';
+                lucide.createIcons();
             }
         };
 
-        window.resetApp = async function() {
-            if(confirm("ATENCIÓN: ¿Quieres borrar TODOS los registros de la Nube permanentemente? Esta acción no se puede deshacer.")) {
-                if (db && currentUser) {
-                    try {
-                        const btn = event.target;
-                        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Borrando de la Nube...`;
-                        lucide.createIcons();
-                        
-                        // Borramos documentos 1 a 1 de la BD
-                        for (let group of window.groups) {
-                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', group.id));
-                        }
-                    } catch(e) {
-                        alert("Hubo un error borrando la base de datos: " + e.message);
-                    }
-                } else {
-                    window.groups = [];
-                    saveLocalFallback();
+        // --- CONFIG EMAILJS ---
+        window.openConfigModal = function() {
+            document.getElementById('modal-config').classList.remove('hidden');
+        };
+
+        window.closeConfigModal = function() {
+            document.getElementById('modal-config').classList.add('hidden');
+        };
+
+        window.saveEmailConfig = function() {
+            emailConfig = {
+                serviceId: document.getElementById('cjs-service').value.trim(),
+                templateId: document.getElementById('cjs-template').value.trim(),
+                publicKey: document.getElementById('cjs-key').value.trim()
+            };
+            localStorage.setItem('as_email_config', JSON.stringify(emailConfig));
+            
+            if(emailConfig.publicKey) {
+                try {
+                    emailjs.init(emailConfig.publicKey);
+                    showNotification('Credenciales de EmailJS Guardadas');
+                } catch(e) {
+                    alert("Error: " + e.message);
                 }
+            }
+            window.closeConfigModal();
+        };
+
+        // --- ENVÍO AUTOMÁTICO (EMAILJS) ---
+        window.sendAllEmails = async function() {
+            if(!emailConfig.serviceId || !emailConfig.publicKey || !emailConfig.templateId) {
+                alert("Para enviar automáticamente debes colocar tus credenciales de EmailJS en 'Configurar EmailJS' (arriba a la derecha).");
+                return;
+            }
+
+            if(!confirm("¿Deseas enviar los correos a todos los participantes ahora mismo?")) return;
+
+            const btn = document.getElementById('btn-bulk-send');
+            const progressDiv = document.getElementById('bulk-progress');
+            const progressBar = document.getElementById('bulk-bar');
+            const statusText = document.getElementById('bulk-status-text');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            progressDiv.classList.remove('hidden');
+
+            const total = state.participants.length;
+            let sentCount = 0;
+
+            for (let i = 0; i < total; i++) {
+                const giver = state.participants[i];
+                const receiver = state.results[giver.id];
+                const finalMessage = generateEmailBody(giver.name, receiver.name);
                 
-                window.drawResults = null;
-                document.getElementById('view-results').classList.add('hidden');
-                window.exitAdminMode(); 
+                statusText.innerText = `Enviando a ${giver.name} (${i+1}/${total})...`;
+
+                const badge = document.querySelector(`#card-${giver.id} .status-badge`);
+                if(badge) {
+                    badge.className = 'status-badge bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1';
+                    badge.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Enviando';
+                    lucide.createIcons();
+                }
+
+                try {
+                    // Send via EmailJS
+                    // Required template mapping: We send 'to_name', 'to_email', and 'message'
+                    await emailjs.send(emailConfig.serviceId, emailConfig.templateId, {
+                        to_name: giver.name,
+                        to_email: giver.email,
+                        message: finalMessage
+                    });
+                    
+                    if(badge) {
+                        badge.className = 'status-badge bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1';
+                        badge.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Enviado';
+                        lucide.createIcons();
+                    }
+                    sentCount++;
+                } catch (error) {
+                    console.error("Error enviando a " + giver.email, error);
+                    if(badge) {
+                        badge.className = 'status-badge bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1';
+                        badge.innerHTML = '<i data-lucide="alert-triangle" class="w-3 h-3"></i> Error';
+                        lucide.createIcons();
+                    }
+                }
+
+                // Progress Bar Update
+                const percent = Math.round(((i + 1) / total) * 100);
+                progressBar.style.width = `${percent}%`;
+                
+                // Pequeño retraso para respetar los límites de la API
+                await new Promise(r => setTimeout(r, 700));
+            }
+
+            statusText.innerText = `Proceso finalizado. ${sentCount} de ${total} correos enviados.`;
+            btn.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6"></i> Correos Enviados`;
+            lucide.createIcons();
+        };
+
+        // --- RESETEAR APP ---
+        window.resetApp = function() {
+            if(confirm("¿Estás seguro? Se borrarán todos los participantes y los resultados actuales.")) {
+                state = {
+                    step: 1,
+                    participants: [],
+                    event: { name: '', date: '', budget: '' },
+                    results: null
+                };
+                window.saveState();
+                
+                // Limpiar forms
+                document.getElementById('event-name').value = '';
+                document.getElementById('event-date').value = '';
+                document.getElementById('event-budget').value = '';
+
+                window.goToStep1(true);
             }
         };
+
+        function showNotification(msg) {
+            const notif = document.getElementById('notification');
+            document.getElementById('notif-msg').innerText = msg;
+            notif.classList.remove('hidden');
+            setTimeout(() => notif.classList.add('hidden'), 3000);
+        }
+
     </script>
 </body>
 </html>
