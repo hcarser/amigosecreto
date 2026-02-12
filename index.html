@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigo Secreto - Organizador</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <style>
+        /* Animaciones personalizadas */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-blue-200 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-6 shadow-lg relative overflow-hidden">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
+            <div class="flex items-center gap-3">
+                <i data-lucide="gift" class="w-8 h-8 animate-bounce"></i>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">Amigo Secreto</h1>
+                    <p class="text-indigo-100 text-xs opacity-80">Registro Privado</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="openConfigModal()" class="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-xs md:text-sm transition-all border bg-white/10 border-white/20 hover:bg-white/20 text-white" title="Configurar Servicios">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    <span class="hidden md:inline">Configuración</span>
+                </button>
+
+                <button id="btn-admin-toggle" onclick="toggleAdminMode()" class="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg border bg-indigo-800/50 border-indigo-400/30 hover:bg-indigo-700/50 text-indigo-100">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                    <span>Acceso Organizador</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-4 md:p-6 flex-grow w-full relative">
+
+        <!-- MODAL CONFIGURACIÓN GENERAL -->
+        <div id="modal-config" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                <div class="bg-slate-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
+                    <h3 class="font-bold flex items-center gap-2"><i data-lucide="settings-2" class="w-5 h-5"></i> Configuración de Servicios</h3>
+                    <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                
+                <div class="p-6 space-y-8">
+                    
+                    <!-- SECCIÓN FIREBASE -->
+                    <div>
+                        <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                            <i data-lucide="log-in" class="w-5 h-5 text-green-600"></i> Inicio con Google (Firebase)
+                        </h4>
+                        <p class="text-sm text-slate-500 mb-4">
+                            Permite rellenar el formulario usando una cuenta de Google. Requiere un proyecto en <a href="https://console.firebase.google.com/" target="_blank" class="text-green-600 underline">Firebase Console</a>.
+                            <br>
+                            <span class="text-xs bg-orange-50 text-orange-800 px-1 rounded border border-orange-100">⚠️ Requiere dominio autorizado (no funciona en file://)</span>
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">API Key</label>
+                                <input type="text" id="fb-apikey" placeholder="AIzaSy..." class="w-full p-2 border rounded-lg text-sm font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Auth Domain</label>
+                                <input type="text" id="fb-domain" placeholder="proyecto.firebaseapp.com" class="w-full p-2 border rounded-lg text-sm font-mono">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="saveAllConfigs()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition shadow-lg mt-2">
+                        Guardar Configuración
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificación de Éxito -->
+        <div id="notification" class="hidden fixed top-24 right-4 md:right-10 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 max-w-sm md:max-w-md animate-fade-in">
+            <i data-lucide="check-circle" class="w-8 h-8 flex-shrink-0"></i>
+            <div>
+                <h4 class="font-bold text-lg" id="notif-title">¡Registro Guardado!</h4>
+                <p class="text-green-100 text-sm" id="notif-msg">Tus datos se han almacenado de forma segura.</p>
+            </div>
+        </div>
+
+        <!-- VISTA 1: REGISTRO PÚBLICO -->
+        <div id="view-register" class="max-w-2xl mx-auto animate-fade-in">
+            <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
+                
+                <div class="mb-8 text-center">
+                    <div class="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="user-plus" class="w-8 h-8 text-indigo-600"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-slate-800">Registro de Familia</h2>
+                    <p class="text-slate-500 mt-2">
+                        Bienvenido. Por favor ingresa los datos de tu grupo para el sorteo.
+                    </p>
+                </div>
+                
+                <div class="space-y-6">
+                    <!-- Botón Google Login (Oculto si no hay config) -->
+                    <div id="google-login-container" class="hidden">
+                        <button onclick="handleGoogleSignIn()" class="w-full py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition flex justify-center items-center gap-3 shadow-sm mb-4">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
+                            Autocompletar con Google
+                        </button>
+                        <div class="relative flex py-2 items-center">
+                            <div class="flex-grow border-t border-slate-200"></div>
+                            <span class="flex-shrink-0 mx-4 text-slate-400 text-xs">O ingresa manualmente</span>
+                            <div class="flex-grow border-t border-slate-200"></div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario -->
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nombre del Grupo / Familia</label>
+                        <input type="text" id="input-group-name" placeholder="Ej. Familia Pérez" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Tu Nombre (Representante)</label>
+                            <input type="text" id="input-rep-name" placeholder="Nombre completo" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Tu Número de WhatsApp</label>
+                            <input type="tel" id="input-rep-phone" placeholder="Ej. 50377778888" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none">
+                            <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                                <i data-lucide="message-circle" class="w-3 h-3"></i> El resultado llegará a este WhatsApp.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-100">
+                        <label class="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">
+                            Participantes de tu grupo
+                        </label>
+                        
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" id="input-member-name" placeholder="Escribe un nombre y presiona Enter" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-inner">
+                            <button onclick="addTempMember()" class="bg-slate-800 text-white px-6 rounded-xl hover:bg-slate-700 transition font-bold shadow-lg shadow-slate-200">
+                                Añadir
+                            </button>
+                        </div>
+
+                        <!-- Lista temporal de miembros -->
+                        <div id="temp-members-list" class="min-h-[100px] bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-4 flex flex-wrap gap-2 content-start">
+                            <p id="temp-members-empty" class="text-slate-400 text-center italic mt-2 text-sm w-full">Aún no has añadido participantes.</p>
+                        </div>
+                    </div>
+
+                    <button onclick="saveGroup()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3">
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                        Confirmar y Finalizar Registro
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 2: PANEL DE ADMINISTRADOR -->
+        <div id="view-admin" class="hidden animate-fade-in">
+            <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-r-lg flex items-center justify-between shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-amber-100 p-2 rounded-full">
+                        <i data-lucide="key-round" class="w-6 h-6 text-amber-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-amber-800">Panel de Organizador</h3>
+                        <p class="text-amber-700 text-sm">Modo de administración activo.</p>
+                    </div>
+                </div>
+                <button onclick="exitAdminMode()" class="bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
+                    Cerrar Panel
+                </button>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Lista de Grupos -->
+                <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden h-fit">
+                    <div class="bg-slate-100 p-4 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                            <i data-lucide="users" class="w-5 h-5"></i> Grupos Registrados (<span id="count-groups">0</span>)
+                        </h3>
+                    </div>
+                    <div id="admin-groups-list" class="max-h-[600px] overflow-y-auto p-4 space-y-3">
+                        <div class="text-center py-10 text-slate-400">No hay grupos registrados todavía.</div>
+                    </div>
+                </div>
+
+                <!-- Zona de Sorteo -->
+                <div class="flex flex-col justify-center">
+                    <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl text-center border border-slate-700">
+                        <i data-lucide="gift" class="w-16 h-16 mx-auto mb-4 text-green-400"></i>
+                        <h2 class="text-3xl font-bold mb-2">¿Listos para el sorteo?</h2>
+                        <p class="text-slate-400 mb-8">
+                            Cuando todos los grupos se hayan registrado, pulsa el botón para generar las asignaciones.
+                        </p>
+                        
+                        <button id="btn-draw" onclick="performDraw()" disabled class="w-full py-4 rounded-xl font-bold text-xl flex items-center justify-center gap-3 transition-all bg-slate-700 text-slate-500 cursor-not-allowed">
+                            <i data-lucide="play" class="fill-current"></i>
+                            <span id="btn-draw-text">Faltan participantes</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2">
+                            <i data-lucide="shield-check" class="w-5 h-5 text-blue-500"></i> Estado del Sistema
+                        </h4>
+                        <ul class="text-sm text-slate-600 space-y-2">
+                            <li class="flex justify-between">
+                                <span>Total Grupos:</span> 
+                                <span class="font-bold" id="stat-total-groups">0</span>
+                            </li>
+                            <!-- SE AÑADIÓ LA LÍNEA FALTANTE AQUÍ PARA EVITAR EL ERROR -->
+                            <li class="flex justify-between">
+                                <span>Total Personas:</span> 
+                                <span class="font-bold" id="stat-total-people">0</span>
+                            </li>
+                            <li class="flex justify-between pt-2 border-t border-slate-100 mt-2">
+                                <span>Modo Envío:</span> 
+                                <span class="font-bold text-green-600">WhatsApp (Manual)</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span>Modo Login:</span> 
+                                <span class="font-bold text-slate-600" id="stat-login-mode">Manual</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 3: RESULTADOS -->
+        <div id="view-results" class="hidden animate-fade-in max-w-3xl mx-auto">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center p-3 bg-green-100 text-green-600 rounded-full mb-4">
+                    <i data-lucide="check-circle" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800">¡Sorteo Completado!</h2>
+                <p class="text-slate-600 mt-2">
+                    Las cartas secretas han sido generadas. Haz clic en "Enviar por WhatsApp" para cada grupo.
+                </p>
+            </div>
+
+            <div id="results-list" class="grid gap-6 mb-12">
+                <!-- Tarjetas de resultados aquí -->
+            </div>
+
+            <div class="flex justify-center pb-12">
+                <button onclick="resetApp()" class="flex items-center gap-2 text-slate-500 hover:text-red-600 transition px-8 py-3 rounded-xl border border-slate-200 hover:border-red-200 bg-white shadow-sm hover:shadow">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Reiniciar todo (Nuevo Sorteo)
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="py-6 text-center text-slate-400 text-sm border-t border-slate-200 mt-auto bg-white">
+        <p>Aplicación de Sorteo Seguro 🔒</p>
+    </footer>
+
+    <!-- LÓGICA DE LA APLICACIÓN -->
+    <script>
+        // --- ESTADO ---
+        let groups = [];
+        let tempMembers = [];
+        let drawResults = null;
+        let isAdminMode = false;
+        
+        // Configs
+        let firebaseConfig = { apiKey: '', authDomain: '' };
+        let isFirebaseReady = false;
+
+        // --- REFERENCIAS DOM ---
+        const viewRegister = document.getElementById('view-register');
+        const viewAdmin = document.getElementById('view-admin');
+        const viewResults = document.getElementById('view-results');
+        
+        const btnAdminToggle = document.getElementById('btn-admin-toggle');
+        const btnDraw = document.getElementById('btn-draw');
+        const btnDrawText = document.getElementById('btn-draw-text');
+        
+        const inputGroupName = document.getElementById('input-group-name');
+        const inputRepName = document.getElementById('input-rep-name');
+        const inputRepPhone = document.getElementById('input-rep-phone');
+        const inputMemberName = document.getElementById('input-member-name');
+        
+        const tempMembersList = document.getElementById('temp-members-list');
+        const tempMembersEmpty = document.getElementById('temp-members-empty');
+
+        // --- INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            const savedFB = localStorage.getItem('as_fb_config');
+            if(savedFB) {
+                firebaseConfig = JSON.parse(savedFB);
+                document.getElementById('fb-apikey').value = firebaseConfig.apiKey;
+                document.getElementById('fb-domain').value = firebaseConfig.authDomain;
+                initFirebase();
+            }
+
+            renderStats();
+            updateConfigStatus();
+
+            inputMemberName.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') addTempMember();
+            });
+        });
+
+        // --- CONFIGURACIÓN MODAL ---
+        function openConfigModal() {
+            document.getElementById('modal-config').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('modal-config').classList.add('hidden');
+        }
+
+        function saveAllConfigs() {
+            // Firebase
+            const newFbConfig = {
+                apiKey: document.getElementById('fb-apikey').value.trim(),
+                authDomain: document.getElementById('fb-domain').value.trim()
+            };
+            
+            // Check if config changed to re-init
+            if(JSON.stringify(newFbConfig) !== JSON.stringify(firebaseConfig)) {
+                firebaseConfig = newFbConfig;
+                localStorage.setItem('as_fb_config', JSON.stringify(firebaseConfig));
+                if(firebaseConfig.apiKey) {
+                    initFirebase();
+                } else {
+                    isFirebaseReady = false;
+                }
+            }
+            
+            showNotification('Configuración Guardada', 'Servicios actualizados correctamente.');
+            closeConfigModal();
+            updateConfigStatus();
+        }
+
+        // --- FIREBASE LOGIC ---
+        function initFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                isFirebaseReady = true;
+            } catch(e) {
+                console.error(e);
+                alert("Error iniciando Firebase: " + e.message);
+                isFirebaseReady = false;
+            }
+            updateConfigStatus();
+        }
+
+        function handleGoogleSignIn() {
+            if(!isFirebaseReady) return;
+            
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    // Auto-fill form
+                    inputRepName.value = user.displayName;
+                    inputRepPhone.focus(); // Google doesn't reliably give phone, ask user for it
+                    
+                    showNotification('¡Sesión Iniciada!', `Hola ${user.displayName.split(' ')[0]}, ingresa tu WhatsApp para continuar.`);
+                    
+                    // Sign out immediately so next user isn't logged in
+                    return firebase.auth().signOut();
+                }).catch((error) => {
+                    console.error(error);
+                    alert("Error al iniciar sesión: " + error.message);
+                });
+        }
+
+        function updateConfigStatus() {
+            // Firebase Status UI
+            const loginContainer = document.getElementById('google-login-container');
+            const statLogin = document.getElementById('stat-login-mode');
+            
+            if(isFirebaseReady) {
+                loginContainer.classList.remove('hidden');
+                statLogin.innerText = "Google Auth Activo";
+                statLogin.className = "font-bold text-green-600";
+            } else {
+                loginContainer.classList.add('hidden');
+                statLogin.innerText = "Manual (Sin Login)";
+                statLogin.className = "font-bold text-slate-600";
+            }
+        }
+
+        // --- GESTIÓN DE MIEMBROS TEMPORALES ---
+        function addTempMember() {
+            const name = inputMemberName.value.trim();
+            if (name) {
+                tempMembers.push(name);
+                inputMemberName.value = '';
+                renderTempMembers();
+            }
+        }
+
+        function removeTempMember(index) {
+            tempMembers.splice(index, 1);
+            renderTempMembers();
+        }
+
+        function renderTempMembers() {
+            const items = tempMembersList.querySelectorAll('.member-chip');
+            items.forEach(el => el.remove());
+
+            if (tempMembers.length === 0) {
+                tempMembersEmpty.classList.remove('hidden');
+            } else {
+                tempMembersEmpty.classList.add('hidden');
+                tempMembers.forEach((member, index) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'member-chip animate-fade-in bg-white border border-slate-200 text-slate-700 pl-3 pr-2 py-1.5 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2';
+                    chip.innerHTML = `
+                        ${member}
+                        <button onclick="removeTempMember(${index})" class="w-5 h-5 flex items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-500 hover:text-white transition">×</button>
+                    `;
+                    tempMembersList.appendChild(chip);
+                });
+            }
+        }
+
+        // --- GESTIÓN DE GRUPOS ---
+        function saveGroup() {
+            const groupName = inputGroupName.value.trim();
+            const repName = inputRepName.value.trim();
+            const repPhone = inputRepPhone.value.trim();
+
+            if (!groupName || !repName || !repPhone || tempMembers.length === 0) {
+                alert("Por favor completa todos los datos del representante y añade al menos un participante.");
+                return;
+            }
+
+            // Validar que el teléfono tenga el formato correcto
+            if (!/^\+?[0-9]{8,15}$/.test(repPhone.replace(/\s/g, ''))) {
+                alert("Por favor ingresa un número de WhatsApp válido (solo números y código de país opcional).");
+                return;
+            }
+
+            const newGroup = {
+                id: Date.now().toString(),
+                groupName,
+                repName,
+                repPhone: repPhone.replace(/\s/g, ''),
+                members: tempMembers.map(name => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name,
+                    groupName
+                }))
+            };
+
+            groups.push(newGroup);
+
+            inputGroupName.value = '';
+            inputRepName.value = '';
+            inputRepPhone.value = '';
+            tempMembers = [];
+            renderTempMembers();
+
+            showNotification('¡Registro Guardado!', 'Tus datos se han almacenado de forma segura.');
+            renderAdminGroups();
+            renderStats();
+        }
+
+        function deleteGroup(id) {
+            if(confirm("¿Estás seguro de eliminar este grupo?")) {
+                groups = groups.filter(g => g.id !== id.toString());
+                renderAdminGroups();
+                renderStats();
+            }
+        }
+
+        function showNotification(title, msg) {
+            const notif = document.getElementById('notification');
+            document.getElementById('notif-title').innerText = title;
+            document.getElementById('notif-msg').innerText = msg;
+            notif.classList.remove('hidden');
+            setTimeout(() => {
+                notif.classList.add('hidden');
+            }, 3000);
+        }
+
+        // --- MODO ADMINISTRADOR ---
+        function toggleAdminMode() {
+            if (isAdminMode) {
+                exitAdminMode();
+            } else {
+                const pin = prompt("🔒 ACCESO RESTRINGIDO AL ORGANIZADOR\n\nPor favor ingresa la contraseña para ver los registros y realizar el sorteo.");
+                if (pin === '1234') {
+                    enterAdminMode();
+                } else if (pin !== null) {
+                    alert("⛔ Contraseña incorrecta. Acceso denegado.");
+                }
+            }
+        }
+
+        function enterAdminMode() {
+            isAdminMode = true;
+            viewRegister.classList.add('hidden');
+            viewAdmin.classList.remove('hidden');
+            viewResults.classList.add('hidden');
+            
+            btnAdminToggle.classList.replace('bg-indigo-800/50', 'bg-amber-400');
+            btnAdminToggle.classList.replace('border-indigo-400/30', 'border-amber-500');
+            btnAdminToggle.classList.replace('text-indigo-100', 'text-amber-900');
+            btnAdminToggle.innerHTML = `<i data-lucide="unlock" class="w-4 h-4"></i><span>MODO ORGANIZADOR ACTIVO</span>`;
+            lucide.createIcons();
+            renderAdminGroups();
+        }
+
+        function exitAdminMode() {
+            isAdminMode = false;
+            viewRegister.classList.remove('hidden');
+            viewAdmin.classList.add('hidden');
+            viewResults.classList.add('hidden');
+
+            btnAdminToggle.classList.replace('bg-amber-400', 'bg-indigo-800/50');
+            btnAdminToggle.classList.replace('border-amber-500', 'border-indigo-400/30');
+            btnAdminToggle.classList.replace('text-amber-900', 'text-indigo-100');
+            btnAdminToggle.innerHTML = `<i data-lucide="lock" class="w-4 h-4"></i><span>Acceso Organizador</span>`;
+            lucide.createIcons();
+        }
+
+        function renderAdminGroups() {
+            const list = document.getElementById('admin-groups-list');
+            list.innerHTML = '';
+
+            if (groups.length === 0) {
+                list.innerHTML = '<div class="text-center py-10 text-slate-400">No hay grupos registrados todavía.</div>';
+                return;
+            }
+
+            groups.forEach(group => {
+                const item = document.createElement('div');
+                item.className = 'bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:shadow-md transition';
+                
+                let membersHtml = group.members.map(m => 
+                    `<span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">${m.name}</span>`
+                ).join('');
+
+                item.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-bold text-slate-800">${group.groupName}</h4>
+                            <p class="text-xs text-slate-500">Rep: ${group.repName} (${group.repPhone})</p>
+                        </div>
+                        <button onclick="deleteGroup('${group.id}')" class="text-slate-400 hover:text-red-600 transition" title="Eliminar este grupo">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        ${membersHtml}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function renderStats() {
+            document.getElementById('count-groups').innerText = groups.length;
+            document.getElementById('stat-total-groups').innerText = groups.length;
+            const totalPeople = groups.reduce((acc, g) => acc + g.members.length, 0);
+            
+            // Verificamos si existe el elemento antes de modificarlo para evitar errores
+            const elTotalPeople = document.getElementById('stat-total-people');
+            if(elTotalPeople) elTotalPeople.innerText = totalPeople;
+
+            if (groups.length > 0) {
+                btnDraw.disabled = false;
+                btnDraw.classList.remove('bg-slate-700', 'text-slate-500', 'cursor-not-allowed');
+                btnDraw.classList.add('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105');
+                btnDrawText.innerText = 'REALIZAR SORTEO AHORA';
+            } else {
+                btnDraw.disabled = true;
+                btnDraw.classList.add('bg-slate-700', 'text-slate-500', 'cursor-not-allowed');
+                btnDraw.classList.remove('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105');
+                btnDrawText.innerText = 'Faltan participantes';
+            }
+        }
+
+        // --- SORTEO ---
+        function performDraw() {
+            let allParticipants = [];
+            groups.forEach(group => {
+                group.members.forEach(member => {
+                    allParticipants.push({ ...member });
+                });
+            });
+
+            if (allParticipants.length < 3) {
+                alert("Se necesitan al menos 3 participantes en total para jugar.");
+                return;
+            }
+
+            let shuffled = [...allParticipants];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+
+            const results = {};
+            for (let i = 0; i < shuffled.length; i++) {
+                const giver = shuffled[i];
+                const receiver = shuffled[(i + 1) % shuffled.length];
+                results[giver.id] = receiver;
+            }
+
+            drawResults = results;
+            renderResults();
+            
+            viewAdmin.classList.add('hidden');
+            viewResults.classList.remove('hidden');
+        }
+
+        function renderResults() {
+            const list = document.getElementById('results-list');
+            list.innerHTML = '';
+
+            groups.forEach(group => {
+                const assignments = group.members.map(member => {
+                    const receiver = drawResults[member.id];
+                    return { giver: member.name, receiver: receiver.name };
+                });
+
+                // Cuerpo del Mensaje para WhatsApp
+                let mailBody = `🎄 *RESULTADOS AMIGO SECRETO - ${group.groupName.toUpperCase()}* 🎄\n\n`;
+                mailBody += `Hola ${group.repName}, aquí están los resultados oficiales para tu grupo:\n\n`;
+                mailBody += `------------------------------------------\n`;
+                assignments.forEach(a => {
+                    mailBody += `🎁 *${a.giver}* 👉 le regala a 👉  *${a.receiver}* \n`;
+                });
+                mailBody += `------------------------------------------\n\n`;
+                mailBody += `🤫 IMPORTANTE: Solo tú has recibido esta lista. Compártela discretamente.\n\n¡Felices Fiestas!`;
+
+                const waLink = `https://wa.me/${group.repPhone}?text=${encodeURIComponent(mailBody)}`;
+
+                const card = document.createElement('div');
+                card.id = `card-${group.id}`;
+                card.className = 'bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300';
+                card.innerHTML = `
+                    <div class="p-5 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-50">
+                        <div class="flex items-center gap-4 w-full md:w-auto">
+                            <div class="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-bold text-lg">
+                                ${group.groupName.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800">${group.groupName}</h3>
+                                <p class="text-sm text-slate-500">WA: ${group.repPhone}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="status-area w-full md:w-auto">
+                            <a href="${waLink}" target="_blank" class="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition shadow-lg shadow-green-200">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i> Enviar por WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50/50 p-4">
+                         <button onclick="toggleDetails(this)" class="w-full flex items-center justify-between text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider p-2">
+                            <span class="btn-text">Ver detalles (Solo Organizador)</span>
+                            <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
+                        </button>
+                        <div class="details-content hidden mt-2 bg-white border border-slate-100 rounded-lg divide-y divide-slate-50">
+                            ${assignments.map(a => `
+                                <div class="p-3 flex justify-between items-center text-sm">
+                                    <span class="font-medium text-slate-700">${a.giver}</span>
+                                    <span class="text-slate-300">➜</span>
+                                    <span class="font-bold text-green-600">${a.receiver}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleDetails(btn) {
+            const content = btn.nextElementSibling;
+            const textSpan = btn.querySelector('.btn-text');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                textSpan.innerText = 'Ocultar detalles';
+            } else {
+                content.classList.add('hidden');
+                textSpan.innerText = 'Ver detalles (Solo Organizador)';
+            }
+        }
+
+        function resetApp() {
+            if(confirm("¿Estás seguro de que quieres borrar todo y empezar de cero?")) {
+                groups = [];
+                drawResults = null;
+                viewResults.classList.add('hidden');
+                exitAdminMode();
+            }
+        }
+    </script>
+</body>
+</html>
