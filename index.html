@@ -11,6 +11,7 @@
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         /* Animaciones personalizadas */
         @keyframes fadeIn {
@@ -34,7 +35,7 @@
                 <i data-lucide="gift" class="w-8 h-8 animate-bounce"></i>
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight">Amigo Secreto</h1>
-                    <p class="text-indigo-100 text-xs opacity-80">Registro Privado</p>
+                    <p class="text-indigo-100 text-xs opacity-80">Registro en la Nube</p>
                 </div>
             </div>
             
@@ -58,7 +59,7 @@
         <div id="modal-config" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
                 <div class="bg-slate-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
-                    <h3 class="font-bold flex items-center gap-2"><i data-lucide="settings-2" class="w-5 h-5"></i> Configuración de Servicios</h3>
+                    <h3 class="font-bold flex items-center gap-2"><i data-lucide="database" class="w-5 h-5"></i> Configuración de Base de Datos</h3>
                     <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
                 
@@ -67,14 +68,12 @@
                     <!-- SECCIÓN FIREBASE -->
                     <div>
                         <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                            <i data-lucide="log-in" class="w-5 h-5 text-green-600"></i> Inicio con Google (Firebase)
+                            <i data-lucide="cloud" class="w-5 h-5 text-blue-600"></i> Almacenamiento Nube (Firebase)
                         </h4>
                         <p class="text-sm text-slate-500 mb-4">
-                            Permite rellenar el formulario usando una cuenta de Google. Requiere un proyecto en <a href="https://console.firebase.google.com/" target="_blank" class="text-green-600 underline">Firebase Console</a>.
-                            <br>
-                            <span class="text-xs bg-orange-50 text-orange-800 px-1 rounded border border-orange-100">⚠️ Requiere dominio autorizado (no funciona en file://)</span>
+                            Para que los datos se guarden desde cualquier dispositivo, ingresa las credenciales de tu proyecto de <a href="https://console.firebase.google.com/" target="_blank" class="text-blue-600 underline">Firebase Console</a>. Debes tener habilitado <strong>Firestore Database</strong>.
                         </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">API Key</label>
                                 <input type="text" id="fb-apikey" placeholder="AIzaSy..." class="w-full p-2 border rounded-lg text-sm font-mono">
@@ -83,11 +82,15 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Auth Domain</label>
                                 <input type="text" id="fb-domain" placeholder="proyecto.firebaseapp.com" class="w-full p-2 border rounded-lg text-sm font-mono">
                             </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Project ID</label>
+                                <input type="text" id="fb-projectid" placeholder="mi-proyecto-123" class="w-full p-2 border rounded-lg text-sm font-mono">
+                            </div>
                         </div>
                     </div>
 
-                    <button onclick="saveAllConfigs()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition shadow-lg mt-2">
-                        Guardar Configuración
+                    <button onclick="saveAllConfigs()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition shadow-lg mt-2 flex justify-center items-center gap-2">
+                        <i data-lucide="save" class="w-5 h-5"></i> Guardar y Conectar
                     </button>
                 </div>
             </div>
@@ -98,7 +101,7 @@
             <i data-lucide="check-circle" class="w-8 h-8 flex-shrink-0"></i>
             <div>
                 <h4 class="font-bold text-lg" id="notif-title">¡Registro Guardado!</h4>
-                <p class="text-green-100 text-sm" id="notif-msg">Tus datos se han almacenado de forma segura.</p>
+                <p class="text-green-100 text-sm" id="notif-msg">Tus datos se han almacenado de forma segura en la nube.</p>
             </div>
         </div>
 
@@ -109,20 +112,26 @@
                 
                 <div class="mb-8 text-center">
                     <div class="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="user-plus" class="w-8 h-8 text-indigo-600"></i>
+                        <i data-lucide="users" class="w-8 h-8 text-indigo-600"></i>
                     </div>
                     <h2 class="text-3xl font-bold text-slate-800">Registro de Familia</h2>
                     <p class="text-slate-500 mt-2">
                         Bienvenido. Por favor ingresa los datos de tu grupo para el sorteo.
                     </p>
+                    <div id="cloud-indicator-public" class="mt-3 hidden justify-center">
+                        <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 text-xs font-bold px-3 py-1 rounded-full border border-green-200 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            Conectado a la nube
+                        </span>
+                    </div>
                 </div>
                 
                 <div class="space-y-6">
-                    <!-- Botón Google Login (Oculto si no hay config) -->
+                    <!-- Botón Google Login -->
                     <div id="google-login-container" class="hidden">
                         <button onclick="handleGoogleSignIn()" class="w-full py-3 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition flex justify-center items-center gap-3 shadow-sm mb-4">
                             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
-                            Autocompletar con Google
+                            Autocompletar mi nombre
                         </button>
                         <div class="relative flex py-2 items-center">
                             <div class="flex-grow border-t border-slate-200"></div>
@@ -146,7 +155,7 @@
                             <label class="block text-sm font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Tu Número de WhatsApp</label>
                             <input type="tel" id="input-rep-phone" placeholder="Ej. 50377778888" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none">
                             <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                                <i data-lucide="message-circle" class="w-3 h-3"></i> El resultado llegará a este WhatsApp.
+                                <i data-lucide="message-circle" class="w-3 h-3"></i> Aquí recibirás tus resultados.
                             </p>
                         </div>
                     </div>
@@ -170,8 +179,8 @@
                     </div>
 
                     <button onclick="saveGroup()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold text-lg rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3">
-                        <i data-lucide="check-circle" class="w-6 h-6"></i>
-                        Confirmar y Finalizar Registro
+                        <i data-lucide="cloud-upload" class="w-6 h-6"></i>
+                        Enviar Registro a la Nube
                     </button>
                 </div>
             </div>
@@ -182,11 +191,11 @@
             <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-r-lg flex items-center justify-between shadow-sm">
                 <div class="flex items-center gap-3">
                     <div class="bg-amber-100 p-2 rounded-full">
-                        <i data-lucide="key-round" class="w-6 h-6 text-amber-600"></i>
+                        <i data-lucide="shield" class="w-6 h-6 text-amber-600"></i>
                     </div>
                     <div>
                         <h3 class="font-bold text-amber-800">Panel de Organizador</h3>
-                        <p class="text-amber-700 text-sm">Modo de administración activo.</p>
+                        <p class="text-amber-700 text-sm">Los datos están sincronizados en tiempo real.</p>
                     </div>
                 </div>
                 <button onclick="exitAdminMode()" class="bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition">
@@ -199,21 +208,27 @@
                 <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden h-fit">
                     <div class="bg-slate-100 p-4 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="font-bold text-slate-700 flex items-center gap-2">
-                            <i data-lucide="users" class="w-5 h-5"></i> Grupos Registrados (<span id="count-groups">0</span>)
+                            <i data-lucide="users" class="w-5 h-5"></i> Grupos en la base de datos (<span id="count-groups">0</span>)
                         </h3>
                     </div>
                     <div id="admin-groups-list" class="max-h-[600px] overflow-y-auto p-4 space-y-3">
-                        <div class="text-center py-10 text-slate-400">No hay grupos registrados todavía.</div>
+                        <div class="text-center py-10 text-slate-400">
+                            <i data-lucide="cloud-off" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+                            Esperando registros desde cualquier dispositivo...
+                        </div>
                     </div>
                 </div>
 
                 <!-- Zona de Sorteo -->
                 <div class="flex flex-col justify-center">
-                    <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl text-center border border-slate-700">
+                    <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl text-center border border-slate-700 relative overflow-hidden">
+                        <div id="db-status-overlay" class="absolute top-3 right-3 flex items-center gap-1 text-xs font-bold px-2 py-1 rounded bg-slate-800 text-slate-400">
+                            <div class="w-2 h-2 rounded-full bg-slate-500"></div> Local
+                        </div>
                         <i data-lucide="gift" class="w-16 h-16 mx-auto mb-4 text-green-400"></i>
                         <h2 class="text-3xl font-bold mb-2">¿Listos para el sorteo?</h2>
                         <p class="text-slate-400 mb-8">
-                            Cuando todos los grupos se hayan registrado, pulsa el botón para generar las asignaciones.
+                            Cuando todos hayan enviado sus datos a través del link web, pulsa este botón.
                         </p>
                         
                         <button id="btn-draw" onclick="performDraw()" disabled class="w-full py-4 rounded-xl font-bold text-xl flex items-center justify-center gap-3 transition-all bg-slate-700 text-slate-500 cursor-not-allowed">
@@ -223,26 +238,21 @@
                     </div>
 
                     <div class="mt-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2">
-                            <i data-lucide="shield-check" class="w-5 h-5 text-blue-500"></i> Estado del Sistema
+                        <h4 class="font-bold text-slate-700 mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <i data-lucide="activity" class="w-5 h-5 text-blue-500"></i> Estadísticas Globales
                         </h4>
-                        <ul class="text-sm text-slate-600 space-y-2">
-                            <li class="flex justify-between">
+                        <ul class="text-sm text-slate-600 space-y-3">
+                            <li class="flex justify-between items-center bg-slate-50 p-2 rounded">
                                 <span>Total Grupos:</span> 
-                                <span class="font-bold" id="stat-total-groups">0</span>
+                                <span class="font-bold text-lg" id="stat-total-groups">0</span>
                             </li>
-                            <!-- SE AÑADIÓ LA LÍNEA FALTANTE AQUÍ PARA EVITAR EL ERROR -->
-                            <li class="flex justify-between">
+                            <li class="flex justify-between items-center bg-slate-50 p-2 rounded">
                                 <span>Total Personas:</span> 
-                                <span class="font-bold" id="stat-total-people">0</span>
+                                <span class="font-bold text-lg text-blue-600" id="stat-total-people">0</span>
                             </li>
-                            <li class="flex justify-between pt-2 border-t border-slate-100 mt-2">
-                                <span>Modo Envío:</span> 
-                                <span class="font-bold text-green-600">WhatsApp (Manual)</span>
-                            </li>
-                            <li class="flex justify-between">
-                                <span>Modo Login:</span> 
-                                <span class="font-bold text-slate-600" id="stat-login-mode">Manual</span>
+                            <li class="flex justify-between pt-2">
+                                <span>Conexión Nube:</span> 
+                                <span class="font-bold text-slate-500" id="stat-cloud-status">No conectado</span>
                             </li>
                         </ul>
                     </div>
@@ -258,7 +268,7 @@
                 </div>
                 <h2 class="text-3xl font-bold text-slate-800">¡Sorteo Completado!</h2>
                 <p class="text-slate-600 mt-2">
-                    Las cartas secretas han sido generadas. Haz clic en "Enviar por WhatsApp" para cada grupo.
+                    Las cartas secretas han sido generadas. Haz clic en "Enviar por WhatsApp" para notificar a cada grupo.
                 </p>
             </div>
 
@@ -269,7 +279,7 @@
             <div class="flex justify-center pb-12">
                 <button onclick="resetApp()" class="flex items-center gap-2 text-slate-500 hover:text-red-600 transition px-8 py-3 rounded-xl border border-slate-200 hover:border-red-200 bg-white shadow-sm hover:shadow">
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                    Reiniciar todo (Nuevo Sorteo)
+                    Reiniciar (Borrar Datos de Nube)
                 </button>
             </div>
         </div>
@@ -277,20 +287,25 @@
     </main>
 
     <footer class="py-6 text-center text-slate-400 text-sm border-t border-slate-200 mt-auto bg-white">
-        <p>Aplicación de Sorteo Seguro 🔒</p>
+        <p>Aplicación de Sorteo Colaborativo Seguro ☁️</p>
     </footer>
 
     <!-- LÓGICA DE LA APLICACIÓN -->
     <script>
-        // --- ESTADO ---
+        // --- ESTADO Y VARIABLES GLOBALES ---
         let groups = [];
         let tempMembers = [];
         let drawResults = null;
         let isAdminMode = false;
         
-        // Configs
-        let firebaseConfig = { apiKey: '', authDomain: '' };
+        const appId = 'amigo-secreto-app'; // Identificador único de aplicación
+        
+        // Configuración Firebase (Almacenamiento y Login)
+        let firebaseConfig = { apiKey: '', authDomain: '', projectId: '' };
         let isFirebaseReady = false;
+        let db = null;
+        let currentUser = null;
+        let unsubscribeSnapshot = null;
 
         // --- REFERENCIAS DOM ---
         const viewRegister = document.getElementById('view-register');
@@ -313,16 +328,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
 
-            const savedFB = localStorage.getItem('as_fb_config');
+            // Cargar configuración guardada
+            const savedFB = localStorage.getItem('as_fb_cloud_config');
             if(savedFB) {
                 firebaseConfig = JSON.parse(savedFB);
-                document.getElementById('fb-apikey').value = firebaseConfig.apiKey;
-                document.getElementById('fb-domain').value = firebaseConfig.authDomain;
+                document.getElementById('fb-apikey').value = firebaseConfig.apiKey || '';
+                document.getElementById('fb-domain').value = firebaseConfig.authDomain || '';
+                document.getElementById('fb-projectid').value = firebaseConfig.projectId || '';
                 initFirebase();
             }
 
             renderStats();
-            updateConfigStatus();
 
             inputMemberName.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') addTempMember();
@@ -339,58 +355,106 @@
         }
 
         function saveAllConfigs() {
-            // Firebase
             const newFbConfig = {
                 apiKey: document.getElementById('fb-apikey').value.trim(),
-                authDomain: document.getElementById('fb-domain').value.trim()
+                authDomain: document.getElementById('fb-domain').value.trim(),
+                projectId: document.getElementById('fb-projectid').value.trim()
             };
             
-            // Check if config changed to re-init
+            // Re-iniciar solo si cambió la clave principal
             if(JSON.stringify(newFbConfig) !== JSON.stringify(firebaseConfig)) {
                 firebaseConfig = newFbConfig;
-                localStorage.setItem('as_fb_config', JSON.stringify(firebaseConfig));
-                if(firebaseConfig.apiKey) {
+                localStorage.setItem('as_fb_cloud_config', JSON.stringify(firebaseConfig));
+                if(firebaseConfig.apiKey && firebaseConfig.projectId) {
                     initFirebase();
                 } else {
                     isFirebaseReady = false;
+                    updateConfigStatus();
                 }
             }
             
-            showNotification('Configuración Guardada', 'Servicios actualizados correctamente.');
             closeConfigModal();
-            updateConfigStatus();
         }
 
-        // --- FIREBASE LOGIC ---
-        function initFirebase() {
+        // --- FIREBASE Y FIRESTORE LOGIC ---
+        async function initFirebase() {
             try {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
                 }
+                
+                db = firebase.firestore();
+
+                // Manejo de autenticación para poder escribir/leer en Firestore
+                firebase.auth().onAuthStateChanged(async user => {
+                    currentUser = user;
+                    if (user) {
+                        // Conectado. Escuchar cambios de la base de datos en tiempo real
+                        setupFirestoreListener();
+                    } else {
+                        // Si no hay usuario, iniciamos sesión de forma anónima
+                        try {
+                            await firebase.auth().signInAnonymously();
+                        } catch (e) {
+                            console.error("Fallo autenticación anónima", e);
+                        }
+                    }
+                });
+
+                // Trigger inicial por si no disparó onAuthStateChanged aún
+                if (!firebase.auth().currentUser) {
+                    await firebase.auth().signInAnonymously();
+                }
+
                 isFirebaseReady = true;
+                showNotification('Conectado a la Nube', 'Tus datos ahora se sincronizan en tiempo real.');
             } catch(e) {
                 console.error(e);
-                alert("Error iniciando Firebase: " + e.message);
+                alert("Error al iniciar conexión en la Nube: " + e.message);
                 isFirebaseReady = false;
             }
             updateConfigStatus();
         }
 
+        function setupFirestoreListener() {
+            if (!currentUser || !db) return;
+            if (unsubscribeSnapshot) unsubscribeSnapshot(); // Limpiar listener viejo
+            
+            // Ruta obligatoria para datos compartidos
+            const collectionPath = `artifacts/${appId}/public/data/groups`;
+            
+            unsubscribeSnapshot = db.collection(collectionPath).onSnapshot(snapshot => {
+                groups = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Actualizar las vistas
+                renderAdminGroups();
+                renderStats();
+            }, error => {
+                console.error("Error obteniendo datos de la nube:", error);
+            });
+        }
+
         function handleGoogleSignIn() {
-            if(!isFirebaseReady) return;
+            if(!isFirebaseReady) {
+                alert("Primero debes configurar Firebase en el botón superior.");
+                return;
+            }
             
             const provider = new firebase.auth.GoogleAuthProvider();
             firebase.auth().signInWithPopup(provider)
-                .then((result) => {
+                .then(async (result) => {
                     const user = result.user;
-                    // Auto-fill form
                     inputRepName.value = user.displayName;
-                    inputRepPhone.focus(); // Google doesn't reliably give phone, ask user for it
+                    inputRepPhone.focus(); 
                     
-                    showNotification('¡Sesión Iniciada!', `Hola ${user.displayName.split(' ')[0]}, ingresa tu WhatsApp para continuar.`);
+                    showNotification('¡Sesión Iniciada!', `Hola ${user.displayName.split(' ')[0]}, completa tu WhatsApp.`);
                     
-                    // Sign out immediately so next user isn't logged in
-                    return firebase.auth().signOut();
+                    // Al firmar con Google, la app cierra sesión inmediatamente 
+                    // para que el siguiente pueda hacerlo anónimo, permitiendo multi-registro
+                    await firebase.auth().signOut();
                 }).catch((error) => {
                     console.error(error);
                     alert("Error al iniciar sesión: " + error.message);
@@ -398,18 +462,28 @@
         }
 
         function updateConfigStatus() {
-            // Firebase Status UI
             const loginContainer = document.getElementById('google-login-container');
-            const statLogin = document.getElementById('stat-login-mode');
+            const statCloud = document.getElementById('stat-cloud-status');
+            const cloudIndicatorPublic = document.getElementById('cloud-indicator-public');
+            const overlayDB = document.getElementById('db-status-overlay');
             
-            if(isFirebaseReady) {
+            if(isFirebaseReady && firebaseConfig.projectId) {
                 loginContainer.classList.remove('hidden');
-                statLogin.innerText = "Google Auth Activo";
-                statLogin.className = "font-bold text-green-600";
+                cloudIndicatorPublic.classList.remove('hidden');
+                cloudIndicatorPublic.classList.add('flex');
+                
+                statCloud.innerText = "Conectado (En vivo)";
+                statCloud.className = "font-bold text-green-600";
+                
+                if(overlayDB) overlayDB.innerHTML = '<div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Nube Activa';
             } else {
                 loginContainer.classList.add('hidden');
-                statLogin.innerText = "Manual (Sin Login)";
-                statLogin.className = "font-bold text-slate-600";
+                if(cloudIndicatorPublic) cloudIndicatorPublic.classList.add('hidden');
+                
+                statCloud.innerText = "Local (No guardará en otros PCs)";
+                statCloud.className = "font-bold text-amber-600";
+                
+                if(overlayDB) overlayDB.innerHTML = '<div class="w-2 h-2 rounded-full bg-amber-500"></div> Modo Local';
             }
         }
 
@@ -448,8 +522,8 @@
             }
         }
 
-        // --- GESTIÓN DE GRUPOS ---
-        function saveGroup() {
+        // --- GESTIÓN DE GRUPOS (Guardar en Firestore) ---
+        async function saveGroup() {
             const groupName = inputGroupName.value.trim();
             const repName = inputRepName.value.trim();
             const repPhone = inputRepPhone.value.trim();
@@ -459,14 +533,12 @@
                 return;
             }
 
-            // Validar que el teléfono tenga el formato correcto
             if (!/^\+?[0-9]{8,15}$/.test(repPhone.replace(/\s/g, ''))) {
                 alert("Por favor ingresa un número de WhatsApp válido (solo números y código de país opcional).");
                 return;
             }
 
             const newGroup = {
-                id: Date.now().toString(),
                 groupName,
                 repName,
                 repPhone: repPhone.replace(/\s/g, ''),
@@ -477,24 +549,48 @@
                 }))
             };
 
-            groups.push(newGroup);
+            // Intentar subir a Firestore
+            if (isFirebaseReady && db && currentUser) {
+                try {
+                    const collectionPath = `artifacts/${appId}/public/data/groups`;
+                    await db.collection(collectionPath).add(newGroup);
+                    showNotification('¡Subido a la nube!', 'El grupo ya está disponible para el organizador.');
+                } catch(e) {
+                    alert("Error subiendo datos a la nube: " + e.message);
+                }
+            } else {
+                // Fallback Local (si no han configurado Firebase)
+                newGroup.id = Date.now().toString();
+                groups.push(newGroup);
+                showNotification('Guardado Local', 'Recuerda que sin conexión esto no se verá en otros dispositivos.');
+                renderAdminGroups();
+                renderStats();
+            }
 
+            // Limpiar
             inputGroupName.value = '';
             inputRepName.value = '';
             inputRepPhone.value = '';
             tempMembers = [];
             renderTempMembers();
-
-            showNotification('¡Registro Guardado!', 'Tus datos se han almacenado de forma segura.');
-            renderAdminGroups();
-            renderStats();
+            
+            // Subir el scroll en móviles
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function deleteGroup(id) {
-            if(confirm("¿Estás seguro de eliminar este grupo?")) {
-                groups = groups.filter(g => g.id !== id.toString());
-                renderAdminGroups();
-                renderStats();
+        async function deleteGroup(id) {
+            if(confirm("¿Estás seguro de eliminar este grupo permanentemente?")) {
+                if(isFirebaseReady && db && currentUser) {
+                    try {
+                        await db.collection(`artifacts/${appId}/public/data/groups`).doc(id).delete();
+                    } catch(e) {
+                        alert("Error borrando el grupo: " + e.message);
+                    }
+                } else {
+                    groups = groups.filter(g => g.id !== id.toString());
+                    renderAdminGroups();
+                    renderStats();
+                }
             }
         }
 
@@ -513,7 +609,7 @@
             if (isAdminMode) {
                 exitAdminMode();
             } else {
-                const pin = prompt("🔒 ACCESO RESTRINGIDO AL ORGANIZADOR\n\nPor favor ingresa la contraseña para ver los registros y realizar el sorteo.");
+                const pin = prompt("🔒 ACCESO RESTRINGIDO AL ORGANIZADOR\n\nPor favor ingresa la contraseña para ver los registros.");
                 if (pin === '1234') {
                     enterAdminMode();
                 } else if (pin !== null) {
@@ -531,7 +627,7 @@
             btnAdminToggle.classList.replace('bg-indigo-800/50', 'bg-amber-400');
             btnAdminToggle.classList.replace('border-indigo-400/30', 'border-amber-500');
             btnAdminToggle.classList.replace('text-indigo-100', 'text-amber-900');
-            btnAdminToggle.innerHTML = `<i data-lucide="unlock" class="w-4 h-4"></i><span>MODO ORGANIZADOR ACTIVO</span>`;
+            btnAdminToggle.innerHTML = `<i data-lucide="unlock" class="w-4 h-4"></i><span>MODO ORGANIZADOR</span>`;
             lucide.createIcons();
             renderAdminGroups();
         }
@@ -554,7 +650,12 @@
             list.innerHTML = '';
 
             if (groups.length === 0) {
-                list.innerHTML = '<div class="text-center py-10 text-slate-400">No hay grupos registrados todavía.</div>';
+                list.innerHTML = `
+                    <div class="text-center py-10 text-slate-400">
+                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+                        No hay grupos registrados todavía. Pásales el link web para que se inscriban.
+                    </div>`;
+                lucide.createIcons();
                 return;
             }
 
@@ -572,7 +673,7 @@
                             <h4 class="font-bold text-slate-800">${group.groupName}</h4>
                             <p class="text-xs text-slate-500">Rep: ${group.repName} (${group.repPhone})</p>
                         </div>
-                        <button onclick="deleteGroup('${group.id}')" class="text-slate-400 hover:text-red-600 transition" title="Eliminar este grupo">
+                        <button onclick="deleteGroup('${group.id}')" class="text-slate-400 hover:text-red-600 transition bg-slate-50 p-2 rounded-full" title="Eliminar este grupo">
                             <i data-lucide="trash-2" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -586,23 +687,25 @@
         }
 
         function renderStats() {
-            document.getElementById('count-groups').innerText = groups.length;
-            document.getElementById('stat-total-groups').innerText = groups.length;
-            const totalPeople = groups.reduce((acc, g) => acc + g.members.length, 0);
+            const countEl = document.getElementById('count-groups');
+            const totalGroupEl = document.getElementById('stat-total-groups');
+            const totalPeopleEl = document.getElementById('stat-total-people');
             
-            // Verificamos si existe el elemento antes de modificarlo para evitar errores
-            const elTotalPeople = document.getElementById('stat-total-people');
-            if(elTotalPeople) elTotalPeople.innerText = totalPeople;
+            if(countEl) countEl.innerText = groups.length;
+            if(totalGroupEl) totalGroupEl.innerText = groups.length;
+            
+            const totalPeople = groups.reduce((acc, g) => acc + g.members.length, 0);
+            if(totalPeopleEl) totalPeopleEl.innerText = totalPeople;
 
             if (groups.length > 0) {
                 btnDraw.disabled = false;
                 btnDraw.classList.remove('bg-slate-700', 'text-slate-500', 'cursor-not-allowed');
-                btnDraw.classList.add('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105');
+                btnDraw.classList.add('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105', 'animate-pulse');
                 btnDrawText.innerText = 'REALIZAR SORTEO AHORA';
             } else {
                 btnDraw.disabled = true;
                 btnDraw.classList.add('bg-slate-700', 'text-slate-500', 'cursor-not-allowed');
-                btnDraw.classList.remove('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105');
+                btnDraw.classList.remove('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-lg', 'hover:scale-105', 'animate-pulse');
                 btnDrawText.innerText = 'Faltan participantes';
             }
         }
@@ -717,12 +820,24 @@
             }
         }
 
-        function resetApp() {
-            if(confirm("¿Estás seguro de que quieres borrar todo y empezar de cero?")) {
-                groups = [];
+        async function resetApp() {
+            if(confirm("ATENCIÓN: ¿Quieres borrar todos los registros de la base de datos de la Nube para empezar un nuevo sorteo?")) {
+                if (isFirebaseReady && db && currentUser) {
+                    try {
+                        // Borramos documentos 1 a 1 de la BD
+                        for (let group of groups) {
+                            await db.collection(`artifacts/${appId}/public/data/groups`).doc(group.id).delete();
+                        }
+                    } catch(e) {
+                        alert("Hubo un error borrando la base de datos: " + e.message);
+                    }
+                } else {
+                    groups = [];
+                }
+                
                 drawResults = null;
                 viewResults.classList.add('hidden');
-                exitAdminMode();
+                exitAdminMode(); // Volver al inicio limpio
             }
         }
     </script>
